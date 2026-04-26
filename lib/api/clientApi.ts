@@ -2,9 +2,9 @@ import type { Note, NoteTag } from "@/types/note";
 import type { User } from "@/types/user";
 import nextServer from "./api";
 
-interface FetchNotesResponse{
+interface FetchNotesResponse {
     notes: Note[];
-    totalPages: number,
+    totalPages: number;
 }
 
 export interface CreateNote {
@@ -14,42 +14,29 @@ export interface CreateNote {
 }
 
 export type RegisterRequest = {
-    email: string,
-    password: string,
+    email: string;
+    password: string;
 };
 
 export type LoginRequest = {
-    email: string,
-    password: string,
-};
-
-export type CheckSession = {
-    success: boolean,
+    email: string;
+    password: string;
 };
 
 export type UpdateMeRequest = {
-    username: string,
-}
+    username: string;
+};
 
 export const fetchNotes = async (search: string, page: number, perPage = 12, tag?: string): Promise<FetchNotesResponse> => {
-    const response = await nextServer.get<FetchNotesResponse>(
-        "/notes",
-        {
-            params: {
-                search,
-                page,
-                perPage,
-                tag,
-            },
-        }
-    );
-    
+    const response = await nextServer.get<FetchNotesResponse>("/notes", {
+        params: { search, page, perPage, tag },
+    });
     return response.data;
 };
 
 export const fetchNoteById = async (id: string): Promise<Note> => {
-  const response = await nextServer.get<Note>(`/notes/${id}`);
-  return response.data;
+    const response = await nextServer.get<Note>(`/notes/${id}`);
+    return response.data;
 };
 
 export const createNote = async (payload: CreateNote): Promise<Note> => {
@@ -76,10 +63,10 @@ export const logout = async (): Promise<void> => {
     await nextServer.post("/auth/logout");
 };
 
-export const checkSession = async (): Promise<boolean> => {
-    const response = await nextServer.get<CheckSession>("/auth/session");
-    return response.data.success;
-}
+export const checkSession = async (): Promise<User | null> => {
+    const response = await nextServer.get<User | null>("/auth/session");
+    return response.data;
+};
 
 export const getMe = async (): Promise<User> => {
     const { data } = await nextServer.get<User>("/users/me");
@@ -87,6 +74,6 @@ export const getMe = async (): Promise<User> => {
 };
 
 export const updateMe = async (payload: UpdateMeRequest): Promise<User> => {
-    const { data } = await nextServer.patch("/users/me", payload);
+    const { data } = await nextServer.patch<User>("/users/me", payload);
     return data;
 };

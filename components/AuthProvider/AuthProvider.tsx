@@ -1,8 +1,8 @@
 'use client';
 
-import { checkSession, getMe } from '@/lib/api/clientApi';
+import { checkSession } from '@/lib/api/clientApi';
 import { useAuthStore } from '@/lib/store/authStore';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 type Props = {
     children: React.ReactNode;
@@ -11,19 +11,27 @@ type Props = {
 export default function AuthProvider({ children }: Props) {
     const setUser = useAuthStore((state) => state.setUser);
     const clearIsAuthenticated = useAuthStore((state) => state.clearIsAuthenticated);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchUser = async () => {
-            const isAuthenticated = await checkSession();
-            if (isAuthenticated) {
-                const user = await getMe();
-                if (user) setUser(user);
-            } else {
+            try {
+                const user = await checkSession();
+                if (user && user.email) {
+                    setUser(user);
+                } else {
+                    clearIsAuthenticated();
+                }
+            } catch {
                 clearIsAuthenticated();
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchUser();
     }, [setUser, clearIsAuthenticated]);
 
-    return children;
-};
+    if (isLoading) return <p>Завантаження...</p>;
+
+    return <>{children}</>;
+}
