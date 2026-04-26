@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { cookies } from 'next/headers'; // Додано імпорт
 import { checkServerSession } from './lib/api/serverApi';
 
 const privateRoutes = ['/notes', '/profile'];
@@ -8,8 +9,10 @@ const authRoutes = ['/sign-in', '/sign-up'];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const accessToken = request.cookies.get('accessToken')?.value;
-  const refreshToken = request.cookies.get('refreshToken')?.value;
+  // Використовуємо асинхронну функцію cookies() згідно з новими стандартами
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('accessToken')?.value;
+  const refreshToken = cookieStore.get('refreshToken')?.value;
 
   const isPrivate = privateRoutes.some((route) => pathname.startsWith(route));
   const isAuth = authRoutes.some((route) => pathname.startsWith(route));
@@ -47,14 +50,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 
+  // Змінено цільовий маршрут редиректу на головну сторінку '/'
   if (isAuth && isAuthenticated) {
-    return NextResponse.redirect(new URL('/notes/filter/all', request.url));
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return response;
 }
 
-// ОСЬ ТУТ ЗМІНИВСЯ MATCHER
 export const config = {
   matcher: ['/profile/:path*', '/notes/:path*', '/sign-in', '/sign-up'],
 };
