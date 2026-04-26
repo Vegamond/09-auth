@@ -4,7 +4,7 @@ import { CreateNote } from "../api/clientApi";
 
 type NoteDraftStore = {
     draft: CreateNote;
-    setDraft: (note: CreateNote) => void;
+    setDraft: (note: Partial<CreateNote>) => void;
     clearDraft: () => void;
 };
 
@@ -18,7 +18,7 @@ export const useDraftStore = create<NoteDraftStore>()(
     persist(
         (set) => ({
             draft: initialDraft,
-            setDraft: (note) => set(() => ({ draft: note })),
+            setDraft: (note) => set((state) => ({ draft: { ...state.draft, ...note } })),
             clearDraft: () => set(() => ({ draft: initialDraft })),
         }),
         {
