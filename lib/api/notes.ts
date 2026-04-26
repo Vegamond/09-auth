@@ -1,10 +1,7 @@
-import { noteHubApi } from './client';
-import type {
-  CreateNotePayload,
-  Note,
-  NoteFilterTag,
-  NoteTag,
-} from '@/types/note';
+import axios from 'axios';
+import type { Note } from '@/types/note';
+
+const BASE = '/api/notes';
 
 export interface FetchNotesResponse {
   notes: Note[];
@@ -15,7 +12,7 @@ export interface FetchNotesParams {
   page: number;
   perPage: number;
   search?: string;
-  tag?: NoteFilterTag;
+  tag?: string;
 }
 
 export const fetchNotes = async ({
@@ -24,46 +21,28 @@ export const fetchNotes = async ({
   search = '',
   tag = 'all',
 }: FetchNotesParams): Promise<FetchNotesResponse> => {
-  const trimmedSearch = search.trim();
-
-  const params: {
-    page: number;
-    perPage: number;
-    search?: string;
-    tag?: NoteTag;
-  } = {
-    page,
-    perPage,
-  };
-
-  if (trimmedSearch) {
-    params.search = trimmedSearch;
-  }
-
-  if (tag !== 'all') {
-    params.tag = tag;
-  }
-
-  const { data } = await noteHubApi.get<FetchNotesResponse>('/notes', {
-    params,
-  });
-
+  const params: Record<string, string | number> = { page, perPage };
+  if (search.trim()) params.search = search.trim();
+  if (tag !== 'all') params.tag = tag;
+  const { data } = await axios.get<FetchNotesResponse>(BASE, { params });
   return data;
 };
 
 export const fetchNoteById = async (id: string): Promise<Note> => {
-  const { data } = await noteHubApi.get<Note>(`/notes/${id}`);
+  const { data } = await axios.get<Note>(`${BASE}/${id}`);
   return data;
 };
 
-export const createNote = async (
-  noteData: CreateNotePayload
-): Promise<Note> => {
-  const { data } = await noteHubApi.post<Note>('/notes', noteData);
+export const createNote = async (noteData: {
+  title: string;
+  content: string;
+  tag: string;
+}): Promise<Note> => {
+  const { data } = await axios.post<Note>(BASE, noteData);
   return data;
 };
 
 export const deleteNote = async (id: string): Promise<Note> => {
-  const { data } = await noteHubApi.delete<Note>(`/notes/${id}`);
+  const { data } = await axios.delete<Note>(`${BASE}/${id}`);
   return data;
 };
