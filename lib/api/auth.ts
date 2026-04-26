@@ -1,5 +1,10 @@
 import axios from 'axios';
-import type { User, AuthCredentials } from '@/types/user';
+import type { User } from '@/types/user';
+
+type AuthCredentials = {
+  email: string;
+  password: string;
+};
 
 const BASE = '/api/auth';
 
