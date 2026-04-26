@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { cookies } from 'next/headers'; // Додано імпорт
 import { checkServerSession } from './lib/api/serverApi';
 
 const privateRoutes = ['/notes', '/profile'];
@@ -9,52 +8,51 @@ const authRoutes = ['/sign-in', '/sign-up'];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Використовуємо асинхронну функцію cookies() згідно з новими стандартами
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get('accessToken')?.value;
-  const refreshToken = cookieStore.get('refreshToken')?.value;
+  const accessToken = request.cookies.get('accessToken')?.value;
+  const refreshToken = request.cookies.get('refreshToken')?.value;
 
   const isPrivate = privateRoutes.some((route) => pathname.startsWith(route));
   const isAuth = authRoutes.some((route) => pathname.startsWith(route));
 
   let isAuthenticated = false;
-  let response = NextResponse.next();
+  let newCookies: string[] = [];
 
   if (accessToken) {
     isAuthenticated = true;
-  } else if (!accessToken && refreshToken) {
+  } else if (refreshToken) {
     try {
       const sessionRes = await checkServerSession();
       isAuthenticated = true;
 
+      // Збираємо нові куки тільки через Set-Cookie заголовки
       const setCookies = sessionRes.headers['set-cookie'];
       if (setCookies) {
-        const cookiesArray = Array.isArray(setCookies) ? setCookies : [setCookies];
-        cookiesArray.forEach((cookie) => {
-          response.headers.append('Set-Cookie', cookie);
-        });
+        newCookies = Array.isArray(setCookies) ? setCookies : [setCookies];
       }
-
-      const newAccess = sessionRes.data?.accessToken;
-      const newRefresh = sessionRes.data?.refreshToken;
-      
-      if (newAccess) response.cookies.set('accessToken', newAccess, { path: '/' });
-      if (newRefresh) response.cookies.set('refreshToken', newRefresh, { path: '/' });
-
-    } catch (error) {
+    } catch {
       isAuthenticated = false;
     }
   }
 
+  // Після перевірки сесії — виконуємо ті ж редиректи що й для авторизованих
   if (isPrivate && !isAuthenticated) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
 
-  // Змінено цільовий маршрут редиректу на головну сторінку '/'
   if (isAuth && isAuthenticated) {
-    return NextResponse.redirect(new URL('/', request.url));
+    const redirectResponse = NextResponse.redirect(new URL('/', request.url));
+    // Додаємо оновлені куки до редиректу
+    newCookies.forEach((cookie) => {
+      redirectResponse.headers.append('Set-Cookie', cookie);
+    });
+    return redirectResponse;
   }
 
+  // Для приватних маршрутів після поновлення сесії — передаємо куки далі
+  const response = NextResponse.next();
+  newCookies.forEach((cookie) => {
+    response.headers.append('Set-Cookie', cookie);
+  });
   return response;
 }
 
